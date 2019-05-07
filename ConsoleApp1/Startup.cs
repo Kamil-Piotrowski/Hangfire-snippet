@@ -18,10 +18,10 @@ namespace ConsoleApp1
                 .UseSqlServerStorage("ConsoleApp1.Properties.Settings.Database1ConnectionString");
             app.UseHangfireDashboard();
             app.UseHangfireServer(new BackgroundJobServerOptions {
-                WorkerCount = 2
+                WorkerCount = 10
             });
             //GlobalJobFilters.Filters.Add(new LogEverythingAttribute());
-            //GlobalJobFilters.Filters.Add(new DisableConcurrentExecutionAttribute(60));
+            GlobalJobFilters.Filters.Add(new SingleInstanceFilterAttribute());
 
         }
     }
