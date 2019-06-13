@@ -18,17 +18,19 @@ namespace ConsoleApp1
         
         public static void DoLongTask()
         {
-            Thread.Sleep(10000);
+            Thread.Sleep(5000);
             Console.WriteLine("Done the job");
         }
         //[DisableConcurrentExecution(60)]
         //[SingleJob]
+        //[Queue("first")]
         public static void DoLongTask1()
         {
             DoLongTask();
         }
         //[DisableConcurrentExecution(60)]
         //[SingleJob]
+        //[Queue("second")]
         public static void DoLongTask2()
         {
             DoLongTask();

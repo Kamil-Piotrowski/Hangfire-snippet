@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Hangfire;
 using Hangfire.Common;
 using Hangfire.Logging;
 using Hangfire.States;
@@ -19,14 +20,28 @@ namespace ConsoleApp1
             {
                 using (context.Connection.AcquireDistributedLock("lock", TimeSpan.FromMinutes(1)))
                 {
-                    if (context.Connection.GetAllItemsFromSet(context.BackgroundJob.Job.Method.Name).Count > 0)
+                    if (context.Connection.GetAllItemsFromSet("processing-"+context.BackgroundJob.Job.Method.Name).Count > 0)
                     {
-                        context.CandidateState = new EnqueuedState();
+                        var processingJobId = context.Connection.GetAllItemsFromSet("processing-" + context.BackgroundJob.Job.Method.Name).FirstOrDefault();//currently processing
+                        var lastAwaitingJobId = context.Connection.GetAllItemsFromSet("lastawaiting-"+ context.BackgroundJob.Job.Method.Name).FirstOrDefault();//last awaiting
+                        
+                        string precedessorId = lastAwaitingJobId is null ? processingJobId : lastAwaitingJobId;
+                        context.CandidateState = new AwaitingState(precedessorId);
+                        //add id to awaiting list
+                        var localTransaction = context.Connection.CreateWriteTransaction();
+                        if (lastAwaitingJobId != null)
+                        {
+                            localTransaction.RemoveFromSet("lastawaiting-"+ context.BackgroundJob.Job.Method.Name, lastAwaitingJobId);
+                        }
+                        
+                        localTransaction.AddToSet("lastawaiting-"+ context.BackgroundJob.Job.Method.Name, context.BackgroundJob.Id);
+                        localTransaction.Commit();
+                        Logger.InfoFormat($"onstateelection, job {context.BackgroundJob.Id} awaiting: job {precedessorId}." );
                     }
                     else
                     {
                         var localTransaction = context.Connection.CreateWriteTransaction();
-                        localTransaction.AddToSet(context.BackgroundJob.Job.Method.Name, context.BackgroundJob.Id);
+                        localTransaction.AddToSet("processing-" + context.BackgroundJob.Job.Method.Name, context.BackgroundJob.Id);
                         localTransaction.Commit();
                     }
                 }
@@ -47,7 +62,7 @@ namespace ConsoleApp1
             using (context.Connection.AcquireDistributedLock("lock", TimeSpan.FromMinutes(1)))
             {
                 var localTransaction = context.Connection.CreateWriteTransaction();
-                localTransaction.RemoveFromSet(context.BackgroundJob.Job.Method.Name, context.BackgroundJob.Id);
+                localTransaction.RemoveFromSet("processing-" + context.BackgroundJob.Job.Method.Name, context.BackgroundJob.Id);
                 localTransaction.Commit();
 
             }

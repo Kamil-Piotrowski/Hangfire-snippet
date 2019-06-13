@@ -17,8 +17,14 @@ namespace ConsoleApp1
                 .UseColouredConsoleLogProvider()
                 .UseSqlServerStorage("ConsoleApp1.Properties.Settings.Database1ConnectionString");
             app.UseHangfireDashboard();
+
+
+
+
+
             app.UseHangfireServer(new BackgroundJobServerOptions {
-                WorkerCount = 10
+                WorkerCount = 10,
+                Queues = new []{"DEFAULT", "second"}
             });
             //GlobalJobFilters.Filters.Add(new LogEverythingAttribute());
             GlobalJobFilters.Filters.Add(new SingleInstanceFilterAttribute());
