@@ -24,9 +24,11 @@ namespace ConsoleApp1
         //[DisableConcurrentExecution(60)]
         //[SingleJob]
         //[Queue("first")]
+        [AutomaticRetry(Attempts = 1,DelaysInSeconds = new []{1,1}, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
         public static void DoLongTask1()
         {
             DoLongTask();
+           // throw new Exception();
         }
         //[DisableConcurrentExecution(60)]
         //[SingleJob]

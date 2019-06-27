@@ -6,46 +6,54 @@ using System.Threading.Tasks;
 using Hangfire;
 using Hangfire.Common;
 using Hangfire.Logging;
+using Hangfire.Server;
 using Hangfire.States;
 using Hangfire.Storage;
 
 namespace ConsoleApp1
 {
-    class SingleInstanceFilterAttribute : JobFilterAttribute, IElectStateFilter, IApplyStateFilter
+    class SingleInstanceFilterAttribute : JobFilterAttribute, IElectStateFilter, IApplyStateFilter//, IServerFilter
     {
         private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
         public void OnStateElection(ElectStateContext context)
         {
-            if (context.CandidateState is ProcessingState)
+            if (!(context.CandidateState is ProcessingState)) return;
+            if (context.CurrentState == AwaitingState.StateName)
             {
-                using (context.Connection.AcquireDistributedLock("lock", TimeSpan.FromMinutes(1)))
+                return;
+            }
+
+
+            using (context.Connection.AcquireDistributedLock("lock", TimeSpan.FromMinutes(1)))
+            {
+                if (context.Connection.GetAllItemsFromSet("processing-"+context.BackgroundJob.Job.Method.Name).Count > 0)
                 {
-                    if (context.Connection.GetAllItemsFromSet("processing-"+context.BackgroundJob.Job.Method.Name).Count > 0)
-                    {
-                        var processingJobId = context.Connection.GetAllItemsFromSet("processing-" + context.BackgroundJob.Job.Method.Name).FirstOrDefault();//currently processing
-                        var lastAwaitingJobId = context.Connection.GetAllItemsFromSet("lastawaiting-"+ context.BackgroundJob.Job.Method.Name).FirstOrDefault();//last awaiting
+                    var processingJobId = context.Connection.GetAllItemsFromSet("processing-" + context.BackgroundJob.Job.Method.Name).FirstOrDefault();//currently processing
+                    var lastAwaitingJobId = context.Connection.GetAllItemsFromSet("lastawaiting-"+ context.BackgroundJob.Job.Method.Name).FirstOrDefault();//last awaiting
                         
-                        string precedessorId = lastAwaitingJobId is null ? processingJobId : lastAwaitingJobId;
-                        context.CandidateState = new AwaitingState(precedessorId);
-                        //add id to awaiting list
-                        var localTransaction = context.Connection.CreateWriteTransaction();
-                        if (lastAwaitingJobId != null)
-                        {
-                            localTransaction.RemoveFromSet("lastawaiting-"+ context.BackgroundJob.Job.Method.Name, lastAwaitingJobId);
-                        }
-                        
-                        localTransaction.AddToSet("lastawaiting-"+ context.BackgroundJob.Job.Method.Name, context.BackgroundJob.Id);
-                        localTransaction.Commit();
-                        Logger.InfoFormat($"onstateelection, job {context.BackgroundJob.Id} awaiting: job {precedessorId}." );
-                    }
-                    else
+                    string precedessorId = lastAwaitingJobId is null ? processingJobId : lastAwaitingJobId;
+
+                    context.CandidateState = new AwaitingState(precedessorId);
+                    var localTransaction = context.Connection.CreateWriteTransaction();
+                    if (lastAwaitingJobId != null)
                     {
-                        var localTransaction = context.Connection.CreateWriteTransaction();
-                        localTransaction.AddToSet("processing-" + context.BackgroundJob.Job.Method.Name, context.BackgroundJob.Id);
-                        localTransaction.Commit();
+                        localTransaction.RemoveFromSet("lastawaiting-"+ context.BackgroundJob.Job.Method.Name, lastAwaitingJobId);
                     }
+                        
+                    localTransaction.AddToSet("lastawaiting-"+ context.BackgroundJob.Job.Method.Name, context.BackgroundJob.Id);
+                    localTransaction.Commit();
+                    Logger.InfoFormat($"onstateelection, job {context.BackgroundJob.Id} awaiting: job {precedessorId}." );
+                }
+                else
+                {
+                    Logger.InfoFormat($"onstateelection, job {context.BackgroundJob.Id} entering processing.");
+                    var localTransaction = context.Connection.CreateWriteTransaction();
+                    localTransaction.AddToSet("processing-" + context.BackgroundJob.Job.Method.Name, context.BackgroundJob.Id);
+                    localTransaction.Commit();
                 }
             }
+
+
         }
         public void OnStateApplied(ApplyStateContext context, IWriteOnlyTransaction transaction)
 
@@ -63,6 +71,12 @@ namespace ConsoleApp1
             {
                 var localTransaction = context.Connection.CreateWriteTransaction();
                 localTransaction.RemoveFromSet("processing-" + context.BackgroundJob.Job.Method.Name, context.BackgroundJob.Id);
+                var lastAwaitingJobId = context.Connection.GetAllItemsFromSet("lastawaiting-" + context.BackgroundJob.Job.Method.Name).FirstOrDefault();
+                if (lastAwaitingJobId == context.BackgroundJob.Id)
+                {
+                    localTransaction.RemoveFromSet("lastawaiting-" + context.BackgroundJob.Job.Method.Name, context.BackgroundJob.Id);
+                    
+                }
                 localTransaction.Commit();
 
             }
@@ -73,5 +87,7 @@ namespace ConsoleApp1
         {
             
         }
+
+
     }
 }
