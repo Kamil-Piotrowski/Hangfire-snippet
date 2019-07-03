@@ -18,8 +18,8 @@ namespace ConsoleApp1
         
         public static void DoLongTask()
         {
-            Thread.Sleep(5000);
-            Console.WriteLine("Done the job");
+            Thread.Sleep(10000);
+            //Console.WriteLine("Done the job");
         }
         //[DisableConcurrentExecution(60)]
         //[SingleJob]
@@ -28,7 +28,7 @@ namespace ConsoleApp1
         public static void DoLongTask1()
         {
             DoLongTask();
-           // throw new Exception();
+            throw new Exception();
         }
         //[DisableConcurrentExecution(60)]
         //[SingleJob]
