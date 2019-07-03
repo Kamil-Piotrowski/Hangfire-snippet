@@ -147,7 +147,11 @@ namespace ConsoleApp1
             var jobs = GetJobsIds(key, context);
 
             string before = JsonConvert.SerializeObject(jobs);
-            localTransaction.RemoveFromSet(key, JsonConvert.SerializeObject(jobs));
+            //localTransaction.RemoveFromSet(key, JsonConvert.SerializeObject(jobs));
+            foreach (var item in context.Connection.GetAllItemsFromSet(key).ToList())
+            {
+                localTransaction.RemoveFromSet(key, item);
+            }
             //jobs.Remove(context.BackgroundJob.Id);
             jobs = jobs.Where(x => x != context.BackgroundJob.Id).ToList();
             string after = JsonConvert.SerializeObject(jobs);
