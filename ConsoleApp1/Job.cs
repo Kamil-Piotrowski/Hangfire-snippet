@@ -5,11 +5,16 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Hangfire.Logging;
 
 namespace ConsoleApp1
 {
     class Job
     {
+        private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
+
+        
+
         [LogEverything]
         public static void Execute()
         {
@@ -18,15 +23,17 @@ namespace ConsoleApp1
         
         public static void DoLongTask()
         {
-            Thread.Sleep(10000);
+            Thread.Sleep(2000);
             //Console.WriteLine("Done the job");
         }
         //[DisableConcurrentExecution(60)]
         //[SingleJob]
         //[Queue("first")]
+        [Followup("ConsoleApp1.Job", "dummy", "aaa")]
         [AutomaticRetry(Attempts = 1,DelaysInSeconds = new []{1,1}, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
         public static void DoLongTask1()
         {
+            
             DoLongTask();
             throw new Exception();
         }
@@ -43,5 +50,12 @@ namespace ConsoleApp1
         {
             DoLongTask();
         }
+
+        public static void dummy(string message)
+        {
+            Logger.InfoFormat(message);
+        }
+
+      
     }
 }

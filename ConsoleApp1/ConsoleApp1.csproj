@@ -78,12 +78,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AttributeApplier.cs" />
     <Compile Include="Database1DataSet.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Database1DataSet.xsd</DependentUpon>
     </Compile>
+    <Compile Include="dummyClass.cs" />
+    <Compile Include="FollowupAttribute.cs" />
     <Compile Include="LogEverythingAttribute.cs" />
     <Compile Include="Job.cs" />
     <Compile Include="Program.cs" />

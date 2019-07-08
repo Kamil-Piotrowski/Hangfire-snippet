@@ -32,7 +32,7 @@ namespace ConsoleApp1
 
         private bool BlockQueue(string key, ElectStateContext context)
         {
-            using (context.Connection.AcquireDistributedLock("lock", TimeSpan.FromMinutes(1)))
+            using (context.Connection.AcquireDistributedLock(key, TimeSpan.FromMinutes(1)))
             {
                 var alljobs = GetJobsIds(key, context);
                 //ni mo
@@ -73,7 +73,7 @@ namespace ConsoleApp1
 
         private bool UnblockQueue(ApplyStateContext context, string key)
         {
-            using (context.Connection.AcquireDistributedLock("lock", TimeSpan.FromMinutes(1)))
+            using (context.Connection.AcquireDistributedLock(key, TimeSpan.FromMinutes(1)))
             {
                 
                 
@@ -98,8 +98,16 @@ namespace ConsoleApp1
             {
                 return new List<string>();
             }
-            var processedIds = JsonConvert.DeserializeObject<List<string>>(serialized);
-            if(processedIds is null)
+            List<string> processedIds = null;
+            try
+            {
+                processedIds = JsonConvert.DeserializeObject<List<string>>(serialized);
+            }
+            catch (Exception)
+            {
+
+            }
+            if (processedIds is null)
             {
                 return new List<string>();
             }
@@ -116,7 +124,15 @@ namespace ConsoleApp1
                 return new List<string>();
             }
 
-            var processedIds = JsonConvert.DeserializeObject<List<string>>(serialized);
+            List<string> processedIds = null;
+            try
+            {
+                processedIds = JsonConvert.DeserializeObject<List<string>>(serialized);
+            }
+            catch (Exception)
+            {
+
+            }
             if (processedIds is null)
             {
                 return new List<string>();
@@ -133,6 +149,10 @@ namespace ConsoleApp1
             jobs.Add(context.BackgroundJob.Id);
             Logger.InfoFormat($"add {context.BackgroundJob.Id}: after, {JsonConvert.SerializeObject(jobs)}");
             var localTransaction = context.Connection.CreateWriteTransaction();
+            foreach (var item in context.Connection.GetAllItemsFromSet(key).ToList())
+            {
+                localTransaction.RemoveFromSet(key, item);
+            }
             localTransaction.AddToSet(key, JsonConvert.SerializeObject(jobs));
             localTransaction.Commit();
 

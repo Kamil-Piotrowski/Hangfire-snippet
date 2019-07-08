@@ -30,6 +30,9 @@ namespace ConsoleApp1
                 RecurringJob.AddOrUpdate(()=>Job.DoLongTask1(), "0 4 * * *");
                 RecurringJob.AddOrUpdate(() => Job.DoLongTask2(), "0 4 * * *");
 
+                
+
+
                 Console.WriteLine("Hangfire on");
                 Console.ReadKey();
             }
