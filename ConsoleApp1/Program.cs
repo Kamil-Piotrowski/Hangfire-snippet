@@ -22,11 +22,11 @@ namespace ConsoleApp1
 
             using (WebApp.Start<Startup>("http://localhost:9000"))
             {
-//                for (int i = 0; i < 10; i++)
-//                {
-//                    BackgroundJob.Enqueue(() => Job.DoLongTask1());
-//                    BackgroundJob.Enqueue(() => Job.DoLongTask2());
-//                }
+                for (int i = 0; i < 20; i++)
+                {
+                    BackgroundJob.Enqueue(() => Job.DoLongTask1());
+                    BackgroundJob.Enqueue(() => Job.DoLongTask2());
+                }
                 RecurringJob.AddOrUpdate(()=>Job.DoLongTask1(), "0 4 * * *");
                 RecurringJob.AddOrUpdate(() => Job.DoLongTask2(), "0 4 * * *");
 

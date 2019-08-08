@@ -23,19 +23,19 @@ namespace ConsoleApp1
         
         public static void DoLongTask()
         {
-            Thread.Sleep(2000);
+            Thread.Sleep(5000);
             //Console.WriteLine("Done the job");
         }
         //[DisableConcurrentExecution(60)]
         //[SingleJob]
         //[Queue("first")]
         [Followup("ConsoleApp1.Job", "dummy", "aaa")]
-        [AutomaticRetry(Attempts = 1,DelaysInSeconds = new []{1,1}, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
+        //[AutomaticRetry(Attempts = 1,DelaysInSeconds = new []{1,1}, OnAttemptsExceeded = AttemptsExceededAction.Fail)]
         public static void DoLongTask1()
         {
             
             DoLongTask();
-            throw new Exception();
+            //throw new Exception();
         }
         //[DisableConcurrentExecution(60)]
         //[SingleJob]
